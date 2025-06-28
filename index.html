@@ -61,7 +61,7 @@
 <body>
   <h1>NSE Stock Watchlist</h1>
 
-  <input type="text" id="stock-search" placeholder="Search NSE stock (e.g., RELIANCE)" autocomplete="off">
+  <input type="text" id="stock-search" placeholder="Search NSE stock (e.g., TCS)" autocomplete="off">
   <ul id="suggestions"></ul>
   <button onclick="addStock()">Add to Watchlist</button>
 
@@ -81,11 +81,11 @@
     const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
     let nseSymbols = [];
 
-    // Fetch full NSE stock list
+    // Load all NSE symbols
     fetch("https://raw.githubusercontent.com/dhrumilcse/All-NSE-Stock-Symbols/main/nse_symbols.json")
       .then(res => res.json())
       .then(data => {
-        nseSymbols = data.symbols.map(sym => sym + ".NS");
+        nseSymbols = data.symbols.map(sym => sym.toUpperCase() + ".NS");
       });
 
     const input = document.getElementById("stock-search");
@@ -202,7 +202,7 @@
     });
 
     renderWatchlist();
-    setInterval(updatePrices, 15000); // Refresh prices every 15 seconds
+    setInterval(updatePrices, 15000); // Refresh every 15 sec
   </script>
 </body>
 </html>
