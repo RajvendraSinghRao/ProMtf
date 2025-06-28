@@ -53,7 +53,10 @@
 </table>
 
 <script>
-  const apiKey = "d1g0hjhr01qk4ao08nn"; // ✅ Corrected key (20 chars only)
+  // ✅ Correct API key (20 chars)
+  const apiKey = "d1g0hjhr01qk4ao08nn";
+  
+  // ✅ NSE Stock Symbols (add or change as needed)
   const stocks = [
     { name: "Reliance", symbol: "RELIANCE.NS" },
     { name: "TCS", symbol: "TCS.NS" },
@@ -64,6 +67,7 @@
 
   const table = document.getElementById("stock-table");
 
+  // Build static table rows
   stocks.forEach(stock => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -74,14 +78,17 @@
     table.appendChild(row);
   });
 
+  // Fetch stock prices from Finnhub API
   async function updatePrices() {
     for (const stock of stocks) {
-      const cellId = stock.symbol.replace('.', '');
-      const cell = document.getElementById(cellId);
+      const priceCellId = stock.symbol.replace('.', '');
+      const cell = document.getElementById(priceCellId);
+
       try {
         const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=${apiKey}`);
         const data = await res.json();
-        if (data && data.c > 0) {
+
+        if (data.c && data.c > 0) {
           cell.textContent = `₹${data.c.toFixed(2)}`;
           cell.classList.remove('error');
         } else {
@@ -89,7 +96,7 @@
           cell.classList.add('error');
         }
       } catch (err) {
-        console.error("Error fetching price for", stock.symbol, err);
+        console.error("Fetch error:", err);
         cell.textContent = "Error";
         cell.classList.add('error');
       }
@@ -97,7 +104,7 @@
   }
 
   updatePrices();
-  setInterval(updatePrices, 10000); // Update every 10 seconds
+  setInterval(updatePrices, 10000); // Refresh every 10 seconds
 </script>
 
 </body>
