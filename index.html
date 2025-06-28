@@ -1,184 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>NSE Stock Watchlist</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      padding: 20px;
-      text-align: center;
-    }
-    input, button, select {
-      padding: 10px;
-      font-size: 16px;
-      margin: 5px;
-    }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 90%;
-      background-color: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-    .price {
-      color: green;
-      font-weight: bold;
-    }
-    .error {
-      color: red;
-    }
-    #suggestions {
-      display: block;
-      max-height: 150px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      background: #fff;
-      width: 300px;
-      margin: 0 auto;
-      text-align: left;
-    }
-    #suggestions div {
-      padding: 8px;
-      cursor: pointer;
-    }
-    #suggestions div:hover {
-      background-color: #f0f0f0;
-    }
-  </style>
-</head>
-<body>
-<h1>NSE Stock Watchlist</h1>
-
-<input type="text" id="stockInput" placeholder="Search NSE stock (e.g., RELIANCE)" oninput="showSuggestions()">
-<div id="suggestions"></div>
-<button onclick="addToWatchlist()">Add to Watchlist</button>
-
-<h2>Your Watchlist</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Company Symbol</th>
-      <th>Price (INR)</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody id="watchlist"></tbody>
-</table>
-
 <script>
-  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
+  const nseSymbols = [
+    "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
+    "SBIN.NS", "HCLTECH.NS", "WIPRO.NS", "AXISBANK.NS", "LT.NS", "MARUTI.NS",
+    "BAJAJFINSV.NS", "HINDUNILVR.NS", "ITC.NS", "ULTRACEMCO.NS", "COALINDIA.NS",
+    "ADANIENT.NS", "POWERGRID.NS", "NTPC.NS", "TITAN.NS"
+    // Add more as needed
+  ];
 
-  const allStocks = ["RELIANCE", "RBLBANK", "RAYMOND", "RAJESHEXPO", "RAIN", "RAMCOCEM", "RALLIS", "RITES", "RADICO", "RPOWER", "RCF", "RECLTD", "RVNL", "RANEENGINE", "RAJRATAN", "RAJRILTD", "RAMANEWS"];
+  const input = document.getElementById("stock-search");
+  const suggestions = document.getElementById("suggestions");
 
-  function getSavedWatchlist() {
-    return JSON.parse(localStorage.getItem("nseWatchlist") || "[]");
-  }
+  input.addEventListener("input", () => {
+    const val = input.value.toUpperCase();
+    suggestions.innerHTML = "";
 
-  function saveWatchlist(list) {
-    localStorage.setItem("nseWatchlist", JSON.stringify(list));
-  }
+    if (val.length === 0) return;
 
-  function addToWatchlist() {
-    const input = document.getElementById("stockInput");
-    const symbol = input.value.trim().toUpperCase();
-    if (!symbol.match(/^[A-Z]+$/)) return alert("Enter valid stock symbol");
-    const fullSymbol = symbol + ".NS";
-    const watchlist = getSavedWatchlist();
-    if (!watchlist.includes(fullSymbol)) {
-      watchlist.push(fullSymbol);
-      saveWatchlist(watchlist);
-      input.value = "";
-      document.getElementById("suggestions").innerHTML = "";
-      renderWatchlist();
-    } else {
-      alert("Already in watchlist");
-    }
-  }
+    const matches = nseSymbols.filter(symbol => symbol.startsWith(val)).slice(0, 10);
 
-  function removeFromWatchlist(symbol) {
-    const updated = getSavedWatchlist().filter(s => s !== symbol);
-    saveWatchlist(updated);
-    renderWatchlist();
-  }
-
-  async function fetchPrices(symbols) {
-    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols.join(',')}`;
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "X-RapidAPI-Key": rapidApiKey,
-          "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
-        }
-      });
-      const data = await res.json();
-      return data.quoteResponse.result;
-    } catch (err) {
-      console.error("API error:", err);
-      return [];
-    }
-  }
-
-  async function renderWatchlist() {
-    const tbody = document.getElementById("watchlist");
-    tbody.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
-    const watchlist = getSavedWatchlist();
-    if (watchlist.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='3'>No stocks in watchlist</td></tr>";
-      return;
-    }
-    const prices = await fetchPrices(watchlist);
-    tbody.innerHTML = "";
-    watchlist.forEach(symbol => {
-      const stock = prices.find(s => s.symbol === symbol);
-      const row = document.createElement("tr");
-      if (stock && stock.regularMarketPrice !== undefined) {
-        row.innerHTML = `
-          <td>${stock.symbol}</td>
-          <td class="price">₹${stock.regularMarketPrice.toFixed(2)}</td>
-          <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
-        `;
-      } else {
-        row.innerHTML = `
-          <td>${symbol}</td>
-          <td class="error">Unavailable</td>
-          <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
-        `;
-      }
-      tbody.appendChild(row);
-    });
-  }
-
-  function showSuggestions() {
-    const input = document.getElementById("stockInput").value.toUpperCase();
-    const suggestionBox = document.getElementById("suggestions");
-    suggestionBox.innerHTML = "";
-    if (input.length === 0) return;
-    const matches = allStocks.filter(stock => stock.startsWith(input));
-    matches.forEach(stock => {
-      const div = document.createElement("div");
-      div.textContent = stock;
-      div.onclick = () => {
-        document.getElementById("stockInput").value = stock;
-        suggestionBox.innerHTML = "";
+    matches.forEach(symbol => {
+      const li = document.createElement("li");
+      li.textContent = symbol;
+      li.onclick = () => {
+        input.value = symbol;
+        suggestions.innerHTML = "";
       };
-      suggestionBox.appendChild(div);
+      suggestions.appendChild(li);
     });
-  }
+  });
 
-  renderWatchlist();
-  setInterval(renderWatchlist, 15000); // Refresh every 15 sec
+  document.addEventListener("click", (e) => {
+    if (!suggestions.contains(e.target) && e.target !== input) {
+      suggestions.innerHTML = "";
+    }
+  });
 </script>
-
-</body>
-</html>
