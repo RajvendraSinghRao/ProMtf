@@ -2,207 +2,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>NSE Stock Watchlist</title>
+  <title>NSE Watchlist</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      padding: 20px;
-      text-align: center;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-      margin: 5px;
-    }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 90%;
-      background-color: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-    .price {
-      color: green;
-      font-weight: bold;
-      transition: all 0.5s ease;
-    }
-    #suggestions {
-      list-style: none;
-      padding: 0;
-      margin-top: 0;
-      max-height: 150px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      background: white;
-      width: 300px;
-      margin: auto;
-      text-align: left;
-      position: absolute;
-      z-index: 1000;
-    }
-    #suggestions li {
-      padding: 8px;
-      cursor: pointer;
-    }
-    #suggestions li:hover {
-      background-color: #f0f0f0;
-    }
+    body { font-family: Arial; text-align: center; padding: 20px; background: #f4f4f4; }
+    input, button { padding: 10px; font-size: 16px; }
+    table { margin: 20px auto; border-collapse: collapse; width: 90%; background: white; }
+    th, td { padding: 12px; border: 1px solid #ccc; }
+    th { background-color: #007bff; color: white; }
+    .price { color: green; font-weight: bold; }
+    #suggestions { list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ccc; background: white; position: absolute; width: 300px; margin-left: auto; margin-right: auto; left: 0; right: 0; }
+    #suggestions li { padding: 8px; cursor: pointer; }
+    #suggestions li:hover { background: #eee; }
   </style>
 </head>
 <body>
-  <h1>NSE Stock Watchlist</h1>
 
-  <input type="text" id="stock-search" placeholder="Search NSE stock (e.g., TCS)" autocomplete="off">
-  <ul id="suggestions"></ul>
-  <button onclick="addStock()">Add to Watchlist</button>
+<h1>NSE Stock Watchlist</h1>
 
-  <h2>Your Watchlist</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Company Symbol</th>
-        <th>Price (INR)</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="watchlist"></tbody>
-  </table>
+<input type="text" id="stock-search" placeholder="Search NSE stock (e.g., SUZLON)" autocomplete="off" />
+<ul id="suggestions"></ul>
+<button onclick="addStock()">Add to Watchlist</button>
 
-  <script>
-    const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
-    let nseSymbols = [];
+<h2>Your Watchlist</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Price (INR)</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="watchlist"></tbody>
+</table>
 
-    // Load all NSE symbols
-    fetch("https://raw.githubusercontent.com/dhrumilcse/All-NSE-Stock-Symbols/main/nse_symbols.json")
-      .then(res => res.json())
-      .then(data => {
-        nseSymbols = data.symbols.map(sym => sym.toUpperCase() + ".NS");
-      });
+<script>
+  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
 
+  const nseSymbols = [
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ITC.NS",
+    "KPIGREEN.NS", "SUZLON.NS", "SBIN.NS", "TITAN.NS", "ADANIPOWER.NS",
+    "ONGC.NS", "ADANIENT.NS", "AXISBANK.NS", "DMART.NS", "IRCTC.NS"
+  ];
+
+  function getSavedWatchlist() {
+    return JSON.parse(localStorage.getItem("nseWatchlist") || "[]");
+  }
+
+  function saveWatchlist(list) {
+    localStorage.setItem("nseWatchlist", JSON.stringify(list));
+  }
+
+  function addStock() {
     const input = document.getElementById("stock-search");
-    const suggestions = document.getElementById("suggestions");
-
-    function getSavedWatchlist() {
-      return JSON.parse(localStorage.getItem("nseWatchlist") || "[]");
+    const symbol = input.value.trim().toUpperCase();
+    const fullSymbol = symbol.endsWith(".NS") ? symbol : symbol + ".NS";
+    if (!nseSymbols.includes(fullSymbol)) {
+      alert("Invalid stock symbol.");
+      return;
     }
 
-    function saveWatchlist(list) {
-      localStorage.setItem("nseWatchlist", JSON.stringify(list));
+    const watchlist = getSavedWatchlist();
+    if (!watchlist.includes(fullSymbol)) {
+      watchlist.push(fullSymbol);
+      saveWatchlist(watchlist);
+      addRow(fullSymbol);
+      updatePrices();
+    } else {
+      alert("Already in watchlist");
     }
 
-    function addStock() {
-      const symbol = input.value.trim().toUpperCase();
-      const fullSymbol = symbol.endsWith(".NS") ? symbol : symbol + ".NS";
-      if (!nseSymbols.includes(fullSymbol)) {
-        alert("Please select a valid NSE stock from the list.");
-        return;
-      }
-      const watchlist = getSavedWatchlist();
-      if (!watchlist.includes(fullSymbol)) {
-        watchlist.push(fullSymbol);
-        saveWatchlist(watchlist);
-        input.value = "";
-        suggestions.innerHTML = "";
-        addRow(fullSymbol);
-        updatePrices();
-      } else {
-        alert("Already in watchlist");
-      }
-    }
+    input.value = "";
+    document.getElementById("suggestions").innerHTML = "";
+  }
 
-    function removeFromWatchlist(symbol) {
-      const updated = getSavedWatchlist().filter(s => s !== symbol);
-      saveWatchlist(updated);
-      document.getElementById("row-" + symbol).remove();
-    }
+  function removeFromWatchlist(symbol) {
+    const updated = getSavedWatchlist().filter(s => s !== symbol);
+    saveWatchlist(updated);
+    document.getElementById("row-" + symbol).remove();
+  }
 
-    async function fetchPrices(symbols) {
-      const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols.join(',')}`;
-      try {
-        const res = await fetch(url, {
-          method: "GET",
-          headers: {
-            "X-RapidAPI-Key": rapidApiKey,
-            "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
-          }
-        });
-        const data = await res.json();
-        return data.quoteResponse.result;
-      } catch (err) {
-        console.error("API error:", err);
-        return [];
-      }
-    }
-
-    async function updatePrices() {
-      const watchlist = getSavedWatchlist();
-      if (watchlist.length === 0) return;
-      const prices = await fetchPrices(watchlist);
-      prices.forEach(stock => {
-        const cell = document.querySelector(`#row-${stock.symbol} .price`);
-        if (cell && stock.regularMarketPrice !== undefined) {
-          cell.textContent = `₹${stock.regularMarketPrice.toFixed(2)}`;
+  async function fetchPrices(symbols) {
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols.join(',')}`;
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-RapidAPI-Key": rapidApiKey,
+          "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
         }
       });
+      const data = await res.json();
+      return data.quoteResponse.result;
+    } catch (e) {
+      console.error("API error", e);
+      return [];
     }
+  }
 
-    function addRow(symbol) {
-      const tbody = document.getElementById("watchlist");
-      const row = document.createElement("tr");
-      row.id = "row-" + symbol;
-      row.innerHTML = `
-        <td>${symbol}</td>
-        <td class="price">Loading...</td>
-        <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
-      `;
-      tbody.appendChild(row);
-    }
-
-    function renderWatchlist() {
-      const tbody = document.getElementById("watchlist");
-      tbody.innerHTML = "";
-      const watchlist = getSavedWatchlist();
-      if (watchlist.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='3'>No stocks in watchlist</td></tr>";
-        return;
+  async function updatePrices() {
+    const watchlist = getSavedWatchlist();
+    if (watchlist.length === 0) return;
+    const prices = await fetchPrices(watchlist);
+    prices.forEach(stock => {
+      const cell = document.querySelector(`#row-${stock.symbol} .price`);
+      if (cell && stock.regularMarketPrice !== undefined) {
+        cell.textContent = `₹${stock.regularMarketPrice.toFixed(2)}`;
       }
-      watchlist.forEach(addRow);
-      updatePrices();
-    }
-
-    input.addEventListener("input", () => {
-      const val = input.value.toUpperCase();
-      suggestions.innerHTML = "";
-      if (val.length === 0 || nseSymbols.length === 0) return;
-      const matches = nseSymbols.filter(sym => sym.startsWith(val)).slice(0, 10);
-      matches.forEach(symbol => {
-        const li = document.createElement("li");
-        li.textContent = symbol;
-        li.onclick = () => {
-          input.value = symbol;
-          suggestions.innerHTML = "";
-        };
-        suggestions.appendChild(li);
-      });
     });
+  }
 
-    document.addEventListener("click", (e) => {
-      if (!suggestions.contains(e.target) && e.target !== input) {
+  function addRow(symbol) {
+    const tbody = document.getElementById("watchlist");
+    const row = document.createElement("tr");
+    row.id = "row-" + symbol;
+    row.innerHTML = `
+      <td>${symbol}</td>
+      <td class="price">Loading...</td>
+      <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
+    `;
+    tbody.appendChild(row);
+  }
+
+  function renderWatchlist() {
+    const tbody = document.getElementById("watchlist");
+    tbody.innerHTML = "";
+    const watchlist = getSavedWatchlist();
+    if (watchlist.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='3'>No stocks in watchlist</td></tr>";
+      return;
+    }
+    watchlist.forEach(addRow);
+    updatePrices();
+  }
+
+  // Autocomplete
+  const input = document.getElementById("stock-search");
+  input.addEventListener("input", () => {
+    const val = input.value.toUpperCase();
+    const list = nseSymbols.filter(sym => sym.startsWith(val)).slice(0, 10);
+    const suggestions = document.getElementById("suggestions");
+    suggestions.innerHTML = "";
+    list.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      li.onclick = () => {
+        input.value = item;
         suggestions.innerHTML = "";
-      }
+      };
+      suggestions.appendChild(li);
     });
+  });
 
-    renderWatchlist();
-    setInterval(updatePrices, 15000); // Refresh every 15 sec
-  </script>
+  document.addEventListener("click", (e) => {
+    if (!document.getElementById("suggestions").contains(e.target) && e.target !== input) {
+      document.getElementById("suggestions").innerHTML = "";
+    }
+  });
+
+  renderWatchlist();
+  setInterval(updatePrices, 15000);
+</script>
 </body>
 </html>
