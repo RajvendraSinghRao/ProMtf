@@ -2,104 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Live NSE Stock Prices</title>
+  <title>Live NSE Prices</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      text-align: center;
-      padding: 40px;
-    }
-    table {
-      margin: auto;
-      border-collapse: collapse;
-      width: 80%;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px 20px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-    .price {
-      color: green;
-      font-weight: bold;
-    }
-    .error {
-      color: red;
-    }
+    body { font-family: Arial; text-align: center; padding: 40px; background: #f4f4f4; }
+    table { margin: auto; border-collapse: collapse; width: 80%; background: white; }
+    th, td { padding: 10px 20px; border: 1px solid #ddd; }
+    th { background: #007bff; color: white; }
+    .price { font-weight: bold; color: green; }
+    .error { color: red; }
   </style>
 </head>
 <body>
 
-  <h1>Live NSE Stock Prices</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Company</th>
-        <th>Symbol</th>
-        <th>Price (INR)</th>
-      </tr>
-    </thead>
-    <tbody id="stock-table">
-      <!-- Table rows will be filled by JavaScript -->
-    </tbody>
-  </table>
+<h1>Live NSE Stock Prices</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th>Symbol</th>
+      <th>Price</th>
+    </tr>
+  </thead>
+  <tbody id="stock-table"></tbody>
+</table>
 
-  <script>
-    const apiKey = "d1g0871r01qk4ao06vk0d1g0871r01qk4ao06vkg"; // ✅ Your API key
+<script>
+  const apiKey = "d1g0871r01qk4ao06vk0"; // ✅ FIXED API key
+  const stocks = [
+    { name: "Reliance", symbol: "RELIANCE.NS" },
+    { name: "TCS", symbol: "TCS.NS" },
+    { name: "Infosys", symbol: "INFY.NS" }
+  ];
 
-    const stocks = [
-      { name: "Reliance", symbol: "RELIANCE.NS" },
-      { name: "TCS", symbol: "TCS.NS" },
-      { name: "Infosys", symbol: "INFY.NS" },
-      { name: "HDFC Bank", symbol: "HDFCBANK.NS" },
-      { name: "ICICI Bank", symbol: "ICICIBANK.NS" },
-      { name: "State Bank of India", symbol: "SBIN.NS" },
-      { name: "Axis Bank", symbol: "AXISBANK.NS" },
-      { name: "L&T", symbol: "LT.NS" },
-      { name: "ITC", symbol: "ITC.NS" },
-      { name: "HUL", symbol: "HINDUNILVR.NS" }
-    ];
+  const table = document.getElementById("stock-table");
 
-    const table = document.getElementById("stock-table");
+  stocks.forEach(stock => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${stock.name}</td>
+      <td>${stock.symbol}</td>
+      <td class="price" id="${stock.symbol}">Loading...</td>
+    `;
+    table.appendChild(row);
+  });
 
-    // First: build the table with IDs for live update
-    stocks.forEach(stock => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${stock.name}</td>
-        <td>${stock.symbol}</td>
-        <td class="price" id="price-${stock.symbol.replace('.', '')}">Loading...</td>
-      `;
-      table.appendChild(row);
-    });
-
-    // Then: update prices in place
-    async function updatePrices() {
-      for (const stock of stocks) {
-        const priceCellId = "price-" + stock.symbol.replace('.', '');
-        const priceEl = document.getElementById(priceCellId);
-
-        try {
-          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=${apiKey}`);
-          const data = await res.json();
-          const price = data.c ? data.c.toFixed(2) : "N/A";
-          priceEl.textContent = `₹${price}`;
-        } catch (err) {
-          console.error(`Error for ${stock.symbol}:`, err);
-          priceEl.innerHTML = `<span class="error">Error</span>`;
-        }
+  async function updatePrices() {
+    for (let stock of stocks) {
+      try {
+        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=${apiKey}`);
+        const data = await res.json();
+        const price = data.c ? `₹${data.c.toFixed(2)}` : `<span class="error">N/A</span>`;
+        document.getElementById(stock.symbol).innerHTML = price;
+      } catch {
+        document.getElementById(stock.symbol).innerHTML = `<span class="error">Error</span>`;
       }
     }
+  }
 
-    updatePrices(); // Initial load
-    setInterval(updatePrices, 10000); // Smooth update every 10 seconds
-  </script>
+  updatePrices();
+  setInterval(updatePrices, 10000);
+</script>
 
 </body>
 </html>
