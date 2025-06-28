@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>NSE Stock Prices</title>
+  <title>Live NSE Stock Prices</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,6 +29,9 @@
       color: green;
       font-weight: bold;
     }
+    .error {
+      color: red;
+    }
   </style>
 </head>
 <body>
@@ -43,12 +46,12 @@
       </tr>
     </thead>
     <tbody id="stock-table">
-      <!-- Stock rows will be added here -->
+      <!-- Table rows will be filled by JavaScript -->
     </tbody>
   </table>
 
   <script>
-    const apiKey = "YOUR_FINNHUB_API_KEY"; // 🔴 Replace with your real Finnhub API key
+    const apiKey = "d1g0871r01qk4ao06vk0d1g0871r01qk4ao06vkg"; // ✅ Your API key
 
     const stocks = [
       { name: "Reliance", symbol: "RELIANCE.NS" },
@@ -65,39 +68,38 @@
 
     const table = document.getElementById("stock-table");
 
-    async function fetchPrices() {
-      table.innerHTML = ""; // Clear table before reloading
+    // First: build the table with IDs for live update
+    stocks.forEach(stock => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${stock.name}</td>
+        <td>${stock.symbol}</td>
+        <td class="price" id="price-${stock.symbol.replace('.', '')}">Loading...</td>
+      `;
+      table.appendChild(row);
+    });
 
+    // Then: update prices in place
+    async function updatePrices() {
       for (const stock of stocks) {
+        const priceCellId = "price-" + stock.symbol.replace('.', '');
+        const priceEl = document.getElementById(priceCellId);
+
         try {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=${apiKey}`);
           const data = await res.json();
           const price = data.c ? data.c.toFixed(2) : "N/A";
-
-          const row = `
-            <tr>
-              <td>${stock.name}</td>
-              <td>${stock.symbol}</td>
-              <td class="price">₹${price}</td>
-            </tr>
-          `;
-          table.insertAdjacentHTML("beforeend", row);
+          priceEl.textContent = `₹${price}`;
         } catch (err) {
-          console.error(`Error fetching ${stock.symbol}:`, err);
-          const row = `
-            <tr>
-              <td>${stock.name}</td>
-              <td>${stock.symbol}</td>
-              <td style="color:red;">Error</td>
-            </tr>
-          `;
-          table.insertAdjacentHTML("beforeend", row);
+          console.error(`Error for ${stock.symbol}:`, err);
+          priceEl.innerHTML = `<span class="error">Error</span>`;
         }
       }
     }
 
-    fetchPrices();
-    setInterval(fetchPrices, 10000); // Refresh every 10 seconds
+    updatePrices(); // Initial load
+    setInterval(updatePrices, 10000); // Smooth update every 10 seconds
   </script>
+
 </body>
 </html>
