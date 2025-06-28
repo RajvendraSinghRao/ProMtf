@@ -1,32 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Live NSE Stock Prices</title>
+  <meta charset="UTF-8" />
+  <title>Live NSE Stock Prices (Yahoo Finance)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background: #f2f2f2;
+      padding: 20px;
       text-align: center;
-      padding: 40px;
-    }
-    h1 {
-      margin-bottom: 30px;
     }
     table {
       margin: auto;
       border-collapse: collapse;
       width: 80%;
-      background: white;
+      background-color: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     th, td {
       padding: 12px;
       border: 1px solid #ddd;
-      font-size: 16px;
     }
     th {
-      background: #007bff;
+      background-color: #007bff;
       color: white;
     }
     .price {
@@ -40,7 +36,8 @@
 </head>
 <body>
 
-<h1>Live NSE Stock Prices</h1>
+<h1>Live NSE Stock Prices (Yahoo Finance API)</h1>
+
 <table>
   <thead>
     <tr>
@@ -53,10 +50,7 @@
 </table>
 
 <script>
-  // ✅ Correct API key (20 chars)
-  const apiKey = "d1g0hjhr01qk4ao08nngd1g0hjhr01qk4ao08no0";
-  
-  // ✅ NSE Stock Symbols (add or change as needed)
+  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Your working key
   const stocks = [
     { name: "Reliance", symbol: "RELIANCE.NS" },
     { name: "TCS", symbol: "TCS.NS" },
@@ -67,44 +61,56 @@
 
   const table = document.getElementById("stock-table");
 
-  // Build static table rows
+  // Build static rows
   stocks.forEach(stock => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${stock.name}</td>
       <td>${stock.symbol}</td>
-      <td class="price" id="${stock.symbol.replace('.', '')}">Loading...</td>
+      <td id="${stock.symbol.replace('.', '')}">Loading...</td>
     `;
     table.appendChild(row);
   });
 
-  // Fetch stock prices from Finnhub API
-  async function updatePrices() {
-    for (const stock of stocks) {
-      const priceCellId = stock.symbol.replace('.', '');
-      const cell = document.getElementById(priceCellId);
+  async function fetchPrices() {
+    const symbols = stocks.map(s => s.symbol).join(",");
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
 
-      try {
-        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=${apiKey}`);
-        const data = await res.json();
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-RapidAPI-Key": rapidApiKey,
+          "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
+        }
+      });
 
-        if (data.c && data.c > 0) {
-          cell.textContent = `₹${data.c.toFixed(2)}`;
-          cell.classList.remove('error');
+      const data = await res.json();
+      const results = data.quoteResponse.result;
+
+      results.forEach(stock => {
+        const cell = document.getElementById(stock.symbol.replace('.', ''));
+        if (stock.regularMarketPrice !== undefined) {
+          cell.textContent = `₹${stock.regularMarketPrice.toFixed(2)}`;
+          cell.classList.remove("error");
+          cell.classList.add("price");
         } else {
           cell.textContent = "Unavailable";
-          cell.classList.add('error');
+          cell.classList.add("error");
         }
-      } catch (err) {
-        console.error("Fetch error:", err);
+      });
+    } catch (err) {
+      console.error("API fetch error:", err);
+      stocks.forEach(stock => {
+        const cell = document.getElementById(stock.symbol.replace('.', ''));
         cell.textContent = "Error";
-        cell.classList.add('error');
-      }
+        cell.classList.add("error");
+      });
     }
   }
 
-  updatePrices();
-  setInterval(updatePrices, 10000); // Refresh every 10 seconds
+  fetchPrices();
+  setInterval(fetchPrices, 15000); // Refresh every 15 seconds
 </script>
 
 </body>
