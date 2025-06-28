@@ -10,7 +10,7 @@
       padding: 20px;
       text-align: center;
     }
-    input, button {
+    input, button, select {
       padding: 10px;
       font-size: 16px;
       margin: 5px;
@@ -37,12 +37,30 @@
     .error {
       color: red;
     }
+    #suggestions {
+      display: block;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background: #fff;
+      width: 300px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    #suggestions div {
+      padding: 8px;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background-color: #f0f0f0;
+    }
   </style>
 </head>
 <body>
 <h1>NSE Stock Watchlist</h1>
 
-<input type="text" id="stockInput" placeholder="Enter NSE stock name (e.g., RELIANCE)">
+<input type="text" id="stockInput" placeholder="Search NSE stock (e.g., RELIANCE)" oninput="showSuggestions()">
+<div id="suggestions"></div>
 <button onclick="addToWatchlist()">Add to Watchlist</button>
 
 <h2>Your Watchlist</h2>
@@ -60,6 +78,8 @@
 <script>
   const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
 
+  const allStocks = ["RELIANCE", "RBLBANK", "RAYMOND", "RAJESHEXPO", "RAIN", "RAMCOCEM", "RALLIS", "RITES", "RADICO", "RPOWER", "RCF", "RECLTD", "RVNL", "RANEENGINE", "RAJRATAN", "RAJRILTD", "RAMANEWS"];
+
   function getSavedWatchlist() {
     return JSON.parse(localStorage.getItem("nseWatchlist") || "[]");
   }
@@ -70,13 +90,15 @@
 
   function addToWatchlist() {
     const input = document.getElementById("stockInput");
-    const symbol = input.value.trim().toUpperCase() + ".NS";
-    if (!symbol.match(/^[A-Z]+\.NS$/)) return alert("Enter valid stock symbol");
+    const symbol = input.value.trim().toUpperCase();
+    if (!symbol.match(/^[A-Z]+$/)) return alert("Enter valid stock symbol");
+    const fullSymbol = symbol + ".NS";
     const watchlist = getSavedWatchlist();
-    if (!watchlist.includes(symbol)) {
-      watchlist.push(symbol);
+    if (!watchlist.includes(fullSymbol)) {
+      watchlist.push(fullSymbol);
       saveWatchlist(watchlist);
       input.value = "";
+      document.getElementById("suggestions").innerHTML = "";
       renderWatchlist();
     } else {
       alert("Already in watchlist");
@@ -134,6 +156,23 @@
         `;
       }
       tbody.appendChild(row);
+    });
+  }
+
+  function showSuggestions() {
+    const input = document.getElementById("stockInput").value.toUpperCase();
+    const suggestionBox = document.getElementById("suggestions");
+    suggestionBox.innerHTML = "";
+    if (input.length === 0) return;
+    const matches = allStocks.filter(stock => stock.startsWith(input));
+    matches.forEach(stock => {
+      const div = document.createElement("div");
+      div.textContent = stock;
+      div.onclick = () => {
+        document.getElementById("stockInput").value = stock;
+        suggestionBox.innerHTML = "";
+      };
+      suggestionBox.appendChild(div);
     });
   }
 
