@@ -2,18 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live NSE Stock Prices (Yahoo Finance)</title>
+  <title>NSE Stock Watchlist</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      background: #f9f9f9;
       padding: 20px;
       text-align: center;
     }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+    }
     table {
-      margin: auto;
+      margin: 20px auto;
       border-collapse: collapse;
-      width: 80%;
+      width: 90%;
       background-color: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
@@ -26,8 +31,8 @@
       color: white;
     }
     .price {
-      font-weight: bold;
       color: green;
+      font-weight: bold;
     }
     .error {
       color: red;
@@ -35,47 +40,57 @@
   </style>
 </head>
 <body>
+<h1>NSE Stock Watchlist</h1>
 
-<h1>Live NSE Stock Prices (Yahoo Finance API)</h1>
+<input type="text" id="stockInput" placeholder="Enter NSE stock name (e.g., RELIANCE)">
+<button onclick="addToWatchlist()">Add to Watchlist</button>
 
+<h2>Your Watchlist</h2>
 <table>
   <thead>
     <tr>
-      <th>Company</th>
-      <th>Symbol</th>
+      <th>Company Symbol</th>
       <th>Price (INR)</th>
+      <th>Action</th>
     </tr>
   </thead>
-  <tbody id="stock-table"></tbody>
+  <tbody id="watchlist"></tbody>
 </table>
 
 <script>
-  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Your working key
-  const stocks = [
-    { name: "Reliance", symbol: "RELIANCE.NS" },
-    { name: "TCS", symbol: "TCS.NS" },
-    { name: "Infosys", symbol: "INFY.NS" },
-    { name: "HDFC Bank", symbol: "HDFCBANK.NS" },
-    { name: "ICICI Bank", symbol: "ICICIBANK.NS" }
-  ];
+  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
 
-  const table = document.getElementById("stock-table");
+  function getSavedWatchlist() {
+    return JSON.parse(localStorage.getItem("nseWatchlist") || "[]");
+  }
 
-  // Build static rows
-  stocks.forEach(stock => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${stock.name}</td>
-      <td>${stock.symbol}</td>
-      <td id="${stock.symbol.replace('.', '')}">Loading...</td>
-    `;
-    table.appendChild(row);
-  });
+  function saveWatchlist(list) {
+    localStorage.setItem("nseWatchlist", JSON.stringify(list));
+  }
 
-  async function fetchPrices() {
-    const symbols = stocks.map(s => s.symbol).join(",");
-    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
+  function addToWatchlist() {
+    const input = document.getElementById("stockInput");
+    const symbol = input.value.trim().toUpperCase() + ".NS";
+    if (!symbol.match(/^[A-Z]+\.NS$/)) return alert("Enter valid stock symbol");
+    const watchlist = getSavedWatchlist();
+    if (!watchlist.includes(symbol)) {
+      watchlist.push(symbol);
+      saveWatchlist(watchlist);
+      input.value = "";
+      renderWatchlist();
+    } else {
+      alert("Already in watchlist");
+    }
+  }
 
+  function removeFromWatchlist(symbol) {
+    const updated = getSavedWatchlist().filter(s => s !== symbol);
+    saveWatchlist(updated);
+    renderWatchlist();
+  }
+
+  async function fetchPrices(symbols) {
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols.join(',')}`;
     try {
       const res = await fetch(url, {
         method: "GET",
@@ -84,33 +99,46 @@
           "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
         }
       });
-
       const data = await res.json();
-      const results = data.quoteResponse.result;
-
-      results.forEach(stock => {
-        const cell = document.getElementById(stock.symbol.replace('.', ''));
-        if (stock.regularMarketPrice !== undefined) {
-          cell.textContent = `₹${stock.regularMarketPrice.toFixed(2)}`;
-          cell.classList.remove("error");
-          cell.classList.add("price");
-        } else {
-          cell.textContent = "Unavailable";
-          cell.classList.add("error");
-        }
-      });
+      return data.quoteResponse.result;
     } catch (err) {
-      console.error("API fetch error:", err);
-      stocks.forEach(stock => {
-        const cell = document.getElementById(stock.symbol.replace('.', ''));
-        cell.textContent = "Error";
-        cell.classList.add("error");
-      });
+      console.error("API error:", err);
+      return [];
     }
   }
 
-  fetchPrices();
-  setInterval(fetchPrices, 15000); // Refresh every 15 seconds
+  async function renderWatchlist() {
+    const tbody = document.getElementById("watchlist");
+    tbody.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
+    const watchlist = getSavedWatchlist();
+    if (watchlist.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='3'>No stocks in watchlist</td></tr>";
+      return;
+    }
+    const prices = await fetchPrices(watchlist);
+    tbody.innerHTML = "";
+    watchlist.forEach(symbol => {
+      const stock = prices.find(s => s.symbol === symbol);
+      const row = document.createElement("tr");
+      if (stock && stock.regularMarketPrice !== undefined) {
+        row.innerHTML = `
+          <td>${stock.symbol}</td>
+          <td class="price">₹${stock.regularMarketPrice.toFixed(2)}</td>
+          <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
+        `;
+      } else {
+        row.innerHTML = `
+          <td>${symbol}</td>
+          <td class="error">Unavailable</td>
+          <td><button onclick="removeFromWatchlist('${symbol}')">Remove</button></td>
+        `;
+      }
+      tbody.appendChild(row);
+    });
+  }
+
+  renderWatchlist();
+  setInterval(renderWatchlist, 15000); // Refresh every 15 sec
 </script>
 
 </body>
