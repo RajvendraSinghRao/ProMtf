@@ -1,4 +1,3 @@
-<!-- FULL HTML CODE START -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,9 +34,6 @@
       color: green;
       font-weight: bold;
       transition: all 0.5s ease;
-    }
-    .error {
-      color: red;
     }
     #suggestions {
       list-style: none;
@@ -83,14 +79,14 @@
 
   <script>
     const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
+    let nseSymbols = [];
 
-    const nseSymbols = [
-      "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
-      "SBIN.NS", "HCLTECH.NS", "WIPRO.NS", "AXISBANK.NS", "LT.NS",
-      "MARUTI.NS", "BAJAJFINSV.NS", "HINDUNILVR.NS", "ITC.NS", "ULTRACEMCO.NS",
-      "COALINDIA.NS", "ADANIENT.NS", "POWERGRID.NS", "NTPC.NS", "TITAN.NS",
-      "RBLBANK.NS", "RAJESHEXPO.NS", "IRCTC.NS", "DMART.NS", "BPCL.NS"
-    ];
+    // Fetch full NSE stock list
+    fetch("https://raw.githubusercontent.com/dhrumilcse/All-NSE-Stock-Symbols/main/nse_symbols.json")
+      .then(res => res.json())
+      .then(data => {
+        nseSymbols = data.symbols.map(sym => sym + ".NS");
+      });
 
     const input = document.getElementById("stock-search");
     const suggestions = document.getElementById("suggestions");
@@ -117,6 +113,7 @@
         input.value = "";
         suggestions.innerHTML = "";
         addRow(fullSymbol);
+        updatePrices();
       } else {
         alert("Already in watchlist");
       }
@@ -185,7 +182,7 @@
     input.addEventListener("input", () => {
       const val = input.value.toUpperCase();
       suggestions.innerHTML = "";
-      if (val.length === 0) return;
+      if (val.length === 0 || nseSymbols.length === 0) return;
       const matches = nseSymbols.filter(sym => sym.startsWith(val)).slice(0, 10);
       matches.forEach(symbol => {
         const li = document.createElement("li");
@@ -205,8 +202,7 @@
     });
 
     renderWatchlist();
-    setInterval(updatePrices, 15000); // Smooth update every 5 seconds
+    setInterval(updatePrices, 15000); // Refresh prices every 15 seconds
   </script>
 </body>
 </html>
-<!-- FULL HTML CODE END -->
