@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Market Viewer + Watchlist</title>
+  <title>Live NSE Watchlist App</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,6 +58,7 @@
     .chart-container {
       width: 90%;
       margin: 20px auto;
+      display: none;
     }
   </style>
 </head>
@@ -71,7 +72,7 @@
   <div id="suggestions"></div>
 </div>
 
-<!-- 📈 Live Indices -->
+<!-- 📈 Index Table -->
 <table>
   <thead>
     <tr>
@@ -83,7 +84,24 @@
   <tbody id="stock-table"></tbody>
 </table>
 
-<!-- 📋 Selected Stock -->
+<!-- ⭐ Watchlist -->
+<h2>My Watchlist</h2>
+<table id="watchlist-table" style="display:none;">
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Price</th>
+      <th>Open</th>
+      <th>High</th>
+      <th>Low</th>
+      <th>Prev. Close</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="watchlist-body"></tbody>
+</table>
+
+<!-- 📋 Selected Stock Table -->
 <h2>Selected Stock Details</h2>
 <table id="selected-stock-table" style="display:none;">
   <thead>
@@ -100,32 +118,18 @@
   <tbody id="selected-stock-body"></tbody>
 </table>
 
-<!-- 📊 Chart -->
-<div class="chart-container" id="chart-block" style="display:none;">
+<!-- 📊 Chart Block -->
+<div class="chart-container" id="chart-block">
   <h2>Stock Chart</h2>
   <div id="tvchart"></div>
 </div>
 
-<!-- ⭐ Watchlist -->
-<h2>My Watchlist</h2>
-<table id="watchlist-table" style="display:none;">
-  <thead>
-    <tr>
-      <th>Symbol</th>
-      <th>Price</th>
-      <th>Open</th>
-      <th>High</th>
-      <th>Low</th>
-      <th>Prev. Close</th>
-      <th>Remove</th>
-    </tr>
-  </thead>
-  <tbody id="watchlist-body"></tbody>
-</table>
-
 <script>
   const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
-  const watchlist = [];
+  let allStocks = [];
+  let watchlist = [];
+
+  const table = document.getElementById("stock-table");
 
   const indices = [
     { name: "NIFTY 50", symbol: "^NSEI" },
@@ -136,7 +140,6 @@
     { name: "Dow Jones", symbol: "^DJI" }
   ];
 
-  const table = document.getElementById("stock-table");
   indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -164,9 +167,7 @@
         const cellId = index.symbol.replace(/[\^\.]/g, '');
         const cell = document.getElementById(cellId);
         if (index.regularMarketPrice !== undefined) {
-          const price = index.regularMarketPrice.toFixed(2);
-          const currency = index.currency || "₹";
-          cell.textContent = `${currency} ${price}`;
+          cell.textContent = `₹ ${index.regularMarketPrice.toFixed(2)}`;
           cell.classList.add("price");
         } else {
           cell.textContent = "Unavailable";
@@ -181,8 +182,6 @@
   fetchPrices();
   setInterval(fetchPrices, 15000);
 
-  // 🧠 Search Functionality
-  let allStocks = [];
   fetch('nse_stocks.json')
     .then(res => res.json())
     .then(data => allStocks = data);
@@ -193,15 +192,10 @@
   searchInput.addEventListener("input", function () {
     const query = this.value.toLowerCase().trim();
     suggestionsBox.innerHTML = "";
-
-    if (!query) {
-      suggestionsBox.style.display = "none";
-      return;
-    }
+    if (!query) return (suggestionsBox.style.display = "none");
 
     const matches = allStocks.filter(s =>
-      s.symbol.toLowerCase().startsWith(query) ||
-      s.name.toLowerCase().includes(query)
+      s.symbol.toLowerCase().startsWith(query) || s.name.toLowerCase().includes(query)
     ).slice(0, 100);
 
     matches.forEach(stock => {
@@ -212,7 +206,7 @@
         searchInput.value = stock.symbol;
         suggestionsBox.innerHTML = '';
         suggestionsBox.style.display = "none";
-        loadStockDetails(stock.symbol);
+        loadStockDetails(stock.symbol, stock.name);
       };
       suggestionsBox.appendChild(item);
     });
@@ -226,7 +220,7 @@
     }
   });
 
-  function loadStockDetails(symbol) {
+  function loadStockDetails(symbol, name) {
     const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbol}.NS`;
     fetch(url, {
       method: "GET",
@@ -248,33 +242,26 @@
           <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
           <td>${s.regularMarketDayLow ?? 'N/A'}</td>
           <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
-          <td><button onclick="addToWatchlist('${s.symbol}')">Add to Watchlist</button></td>
+          <td>
+            <button onclick="addToWatchlist('${s.symbol}', '${name}')">Add to Watchlist</button>
+          </td>
         </tr>
       `;
       document.getElementById("selected-stock-table").style.display = "table";
-      loadChart(s.symbol);
-    })
-    .catch(err => console.error("Stock fetch error:", err));
+    });
   }
 
-  function loadChart(symbol) {
-    document.getElementById("chart-block").style.display = "block";
-    document.getElementById("tvchart").innerHTML = `
-      <iframe src="https://s.tradingview.com/widgetembed/?symbol=NSE%3A${symbol}&interval=D&theme=light"
-              width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no">
-      </iframe>
-    `;
-  }
-
-  function addToWatchlist(symbol) {
-    if (watchlist.includes(symbol)) return alert("Already in watchlist.");
-    watchlist.push(symbol);
+  function addToWatchlist(symbol, name) {
+    if (watchlist.find(w => w.symbol === symbol)) {
+      alert("Already in watchlist.");
+      return;
+    }
+    watchlist.push({ symbol, name });
     updateWatchlist();
   }
 
   function removeFromWatchlist(symbol) {
-    const idx = watchlist.indexOf(symbol);
-    if (idx > -1) watchlist.splice(idx, 1);
+    watchlist = watchlist.filter(w => w.symbol !== symbol);
     updateWatchlist();
   }
 
@@ -284,7 +271,9 @@
       return;
     }
 
-    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${watchlist.map(s => s + ".NS").join(",")}`;
+    const symbols = watchlist.map(w => `${w.symbol}.NS`).join(",");
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
+
     fetch(url, {
       method: "GET",
       headers: {
@@ -294,21 +283,35 @@
     })
     .then(res => res.json())
     .then(data => {
-      const rows = data.quoteResponse.result.map(s => `
-        <tr>
-          <td>${s.symbol}</td>
-          <td>${s.regularMarketPrice ?? 'N/A'}</td>
-          <td>${s.regularMarketOpen ?? 'N/A'}</td>
-          <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
-          <td>${s.regularMarketDayLow ?? 'N/A'}</td>
-          <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
-          <td><button onclick="removeFromWatchlist('${s.symbol}')">Remove</button></td>
-        </tr>
-      `).join("");
-
+      const rows = data.quoteResponse.result.map(s => {
+        const name = watchlist.find(w => w.symbol === s.symbol.replace(".NS", ""))?.name || s.symbol;
+        return `
+          <tr>
+            <td>${s.symbol.replace(".NS", "")}</td>
+            <td>${s.regularMarketPrice ?? 'N/A'}</td>
+            <td>${s.regularMarketOpen ?? 'N/A'}</td>
+            <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
+            <td>${s.regularMarketDayLow ?? 'N/A'}</td>
+            <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
+            <td>
+              <button onclick="removeFromWatchlist('${s.symbol.replace(".NS", "")}')">Remove</button>
+              <button onclick="showChart('${name}')">View Chart</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
       document.getElementById("watchlist-body").innerHTML = rows;
       document.getElementById("watchlist-table").style.display = "table";
     });
+  }
+
+  function showChart(companyName) {
+    document.getElementById("chart-block").style.display = "block";
+    document.getElementById("tvchart").innerHTML = `
+      <iframe src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(companyName)}&interval=D&theme=light"
+              width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no">
+      </iframe>
+    `;
   }
 </script>
 
