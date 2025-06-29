@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live NSE Stock Prices (Yahoo Finance)</title>
+  <title>Live Global Index Prices</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
     table {
       margin: auto;
       border-collapse: collapse;
-      width: 80%;
+      width: 70%;
       background-color: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
@@ -36,45 +36,43 @@
 </head>
 <body>
 
-<h1>Live NSE Stock Prices (Yahoo Finance API)</h1>
+<h1>Live Global Market Indices</h1>
 
 <table>
   <thead>
     <tr>
-      <th>Company</th>
+      <th>Index Name</th>
       <th>Symbol</th>
-      <th>Price (INR)</th>
+      <th>Price</th>
     </tr>
   </thead>
   <tbody id="stock-table"></tbody>
 </table>
 
 <script>
-  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Your working key
-  const stocks = [
-    { name: "Reliance", symbol: "RELIANCE.NS" },
-    { name: "TCS", symbol: "TCS.NS" },
-    { name: "Infosys", symbol: "INFY.NS" },
-    { name: "HDFC Bank", symbol: "HDFCBANK.NS" },
-    { name: "ICICI Bank", symbol: "ICICIBANK.NS" }
+  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Replace if needed
+
+  const indices = [
+    { name: "Gift Nifty", symbol: "GIFTNIFTY.NS" },
+    { name: "NASDAQ", symbol: "^IXIC" },
+    { name: "Dow Jones", symbol: "^DJI" }
   ];
 
   const table = document.getElementById("stock-table");
 
-  // Build static rows
-  stocks.forEach(stock => {
+  indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${stock.name}</td>
-      <td>${stock.symbol}</td>
-      <td id="${stock.symbol.replace('.', '')}">Loading...</td>
+      <td>${index.name}</td>
+      <td>${index.symbol}</td>
+      <td id="${index.symbol.replace(/[\^\.]/g, '')}">Loading...</td>
     `;
     table.appendChild(row);
   });
 
   async function fetchPrices() {
-    const symbols = stocks.map(s => s.symbol).join(",");
-    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
+    const symbols = indices.map(i => i.symbol).join(",");
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=US&symbols=${symbols}`;
 
     try {
       const res = await fetch(url, {
@@ -88,10 +86,11 @@
       const data = await res.json();
       const results = data.quoteResponse.result;
 
-      results.forEach(stock => {
-        const cell = document.getElementById(stock.symbol.replace('.', ''));
-        if (stock.regularMarketPrice !== undefined) {
-          cell.textContent = `₹${stock.regularMarketPrice.toFixed(2)}`;
+      results.forEach(index => {
+        const cellId = index.symbol.replace(/[\^\.]/g, '');
+        const cell = document.getElementById(cellId);
+        if (index.regularMarketPrice !== undefined) {
+          cell.textContent = `₹${index.regularMarketPrice.toFixed(2)}`;
           cell.classList.remove("error");
           cell.classList.add("price");
         } else {
@@ -101,8 +100,9 @@
       });
     } catch (err) {
       console.error("API fetch error:", err);
-      stocks.forEach(stock => {
-        const cell = document.getElementById(stock.symbol.replace('.', ''));
+      indices.forEach(index => {
+        const cellId = index.symbol.replace(/[\^\.]/g, '');
+        const cell = document.getElementById(cellId);
         cell.textContent = "Error";
         cell.classList.add("error");
       });
@@ -110,7 +110,7 @@
   }
 
   fetchPrices();
-  setInterval(fetchPrices, 15000); // Refresh every 15 seconds
+  setInterval(fetchPrices, 15000);
 </script>
 
 </body>
