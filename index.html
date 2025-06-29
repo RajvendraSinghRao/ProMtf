@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Global Index Prices</title>
+  <title>Live Global & Indian Indices</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
     table {
       margin: auto;
       border-collapse: collapse;
-      width: 70%;
+      width: 80%;
       background-color: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
@@ -36,7 +36,7 @@
 </head>
 <body>
 
-<h1>Live Global Market Indices</h1>
+<h1>Live Market Indices (India & Global)</h1>
 
 <table>
   <thead>
@@ -53,13 +53,18 @@
   const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Replace if needed
 
   const indices = [
-    { name: "Gift Nifty", symbol: "GIFTNIFTY.NS" },
+    { name: "NIFTY 50", symbol: "^NSEI" },
+    { name: "SENSEX", symbol: "^BSESN" },
+    { name: "Bank Nifty", symbol: "^NSEBANK" },
+    { name: "Bankex", symbol: "^BSEBANK" },
+    { name: "FinNifty", symbol: "NIFTY_FIN_SERVICE.NS" },
     { name: "NASDAQ", symbol: "^IXIC" },
     { name: "Dow Jones", symbol: "^DJI" }
   ];
 
   const table = document.getElementById("stock-table");
 
+  // Create rows
   indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -72,7 +77,7 @@
 
   async function fetchPrices() {
     const symbols = indices.map(i => i.symbol).join(",");
-    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=US&symbols=${symbols}`;
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
 
     try {
       const res = await fetch(url, {
@@ -90,7 +95,9 @@
         const cellId = index.symbol.replace(/[\^\.]/g, '');
         const cell = document.getElementById(cellId);
         if (index.regularMarketPrice !== undefined) {
-          cell.textContent = `₹${index.regularMarketPrice.toFixed(2)}`;
+          const price = index.regularMarketPrice.toFixed(2);
+          const currency = index.currency || "₹";
+          cell.textContent = `${currency} ${price}`;
           cell.classList.remove("error");
           cell.classList.add("price");
         } else {
@@ -110,7 +117,7 @@
   }
 
   fetchPrices();
-  setInterval(fetchPrices, 15000);
+  setInterval(fetchPrices, 15000); // Refresh every 15 seconds
 </script>
 
 </body>
