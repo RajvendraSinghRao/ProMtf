@@ -60,6 +60,10 @@
       margin: 20px auto;
       display: none;
     }
+    .separator {
+      background: #e0e0e0;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -72,33 +76,16 @@
   <div id="suggestions"></div>
 </div>
 
-<!-- 📈 Index Table -->
+<!-- 📈 Combined Table -->
 <table>
   <thead>
     <tr>
-      <th>Index Name</th>
+      <th>Index / Symbol</th>
       <th>Symbol</th>
       <th>Price</th>
     </tr>
   </thead>
   <tbody id="stock-table"></tbody>
-</table>
-
-<!-- ⭐ Watchlist -->
-<h2>My Watchlist</h2>
-<table id="watchlist-table" style="display:none;">
-  <thead>
-    <tr>
-      <th>Symbol</th>
-      <th>Price</th>
-      <th>Open</th>
-      <th>High</th>
-      <th>Low</th>
-      <th>Prev. Close</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="watchlist-body"></tbody>
 </table>
 
 <!-- 📋 Selected Stock Table -->
@@ -112,7 +99,7 @@
       <th>High</th>
       <th>Low</th>
       <th>Prev. Close</th>
-      <th>Action</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody id="selected-stock-body"></tbody>
@@ -128,6 +115,7 @@
   const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
   let allStocks = [];
   let watchlist = [];
+  let watchlistSeparatorAdded = false;
 
   const table = document.getElementById("stock-table");
 
@@ -244,6 +232,7 @@
           <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
           <td>
             <button onclick="addToWatchlist('${s.symbol}', '${name}')">Add to Watchlist</button>
+            <button onclick="showChart('${s.symbol}.NS')">View Chart</button>
           </td>
         </tr>
       `;
@@ -260,16 +249,8 @@
     updateWatchlist();
   }
 
-  function removeFromWatchlist(symbol) {
-    watchlist = watchlist.filter(w => w.symbol !== symbol);
-    updateWatchlist();
-  }
-
   function updateWatchlist() {
-    if (watchlist.length === 0) {
-      document.getElementById("watchlist-table").style.display = "none";
-      return;
-    }
+    if (watchlist.length === 0) return;
 
     const symbols = watchlist.map(w => `${w.symbol}.NS`).join(",");
     const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
@@ -283,32 +264,30 @@
     })
     .then(res => res.json())
     .then(data => {
-      const rows = data.quoteResponse.result.map(s => {
-        const name = watchlist.find(w => w.symbol === s.symbol.replace(".NS", ""))?.name || s.symbol;
-        return `
-          <tr>
-            <td>${s.symbol.replace(".NS", "")}</td>
-            <td>${s.regularMarketPrice ?? 'N/A'}</td>
-            <td>${s.regularMarketOpen ?? 'N/A'}</td>
-            <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
-            <td>${s.regularMarketDayLow ?? 'N/A'}</td>
-            <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
-            <td>
-              <button onclick="removeFromWatchlist('${s.symbol.replace(".NS", "")}')">Remove</button>
-              <button onclick="showChart('${name}')">View Chart</button>
-            </td>
-          </tr>
+      if (!watchlistSeparatorAdded) {
+        const sepRow = document.createElement("tr");
+        sepRow.className = "separator";
+        sepRow.innerHTML = `<td colspan="3">My Watchlist</td>`;
+        table.appendChild(sepRow);
+        watchlistSeparatorAdded = true;
+      }
+
+      data.quoteResponse.result.forEach(s => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${s.symbol.replace(".NS", "")}</td>
+          <td>${s.symbol}</td>
+          <td class="price">₹ ${s.regularMarketPrice ?? 'N/A'}</td>
         `;
-      }).join("");
-      document.getElementById("watchlist-body").innerHTML = rows;
-      document.getElementById("watchlist-table").style.display = "table";
+        table.appendChild(row);
+      });
     });
   }
 
-  function showChart(companyName) {
+  function showChart(symbol) {
     document.getElementById("chart-block").style.display = "block";
     document.getElementById("tvchart").innerHTML = `
-      <iframe src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(companyName)}&interval=D&theme=light"
+      <iframe src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=D&theme=light"
               width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no">
       </iframe>
     `;
@@ -317,3 +296,4 @@
 
 </body>
 </html>
+
