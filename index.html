@@ -116,7 +116,6 @@
   let allStocks = [];
   let watchlist = [];
   let watchlistSeparatorAdded = false;
-
   const table = document.getElementById("stock-table");
 
   const indices = [
@@ -231,8 +230,8 @@
           <td>${s.regularMarketDayLow ?? 'N/A'}</td>
           <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
           <td>
-            <button onclick="addToWatchlist('${s.symbol}', '${name}')">Add to Watchlist</button>
-            <button onclick="showChart('${s.symbol}.NS')">View Chart</button>
+            <button onclick="addToWatchlist('${s.symbol}', \`${name}\`)">Add to Watchlist</button>
+            <button onclick="showChart(\`${name}\`)">View Chart</button>
           </td>
         </tr>
       `;
@@ -241,17 +240,14 @@
   }
 
   function addToWatchlist(symbol, name) {
-    if (watchlist.find(w => w.symbol === symbol)) {
-      alert("Already in watchlist.");
-      return;
+    // Always push to watchlist
+    if (!watchlist.some(w => w.symbol === symbol)) {
+      watchlist.push({ symbol, name });
+      updateWatchlist();
     }
-    watchlist.push({ symbol, name });
-    updateWatchlist();
   }
 
   function updateWatchlist() {
-    if (watchlist.length === 0) return;
-
     const symbols = watchlist.map(w => `${w.symbol}.NS`).join(",");
     const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
 
@@ -273,9 +269,12 @@
       }
 
       data.quoteResponse.result.forEach(s => {
+        const existing = document.querySelector(`#stock-table tr[data-watch="${s.symbol}"]`);
+        if (existing) return;
         const row = document.createElement("tr");
+        row.setAttribute("data-watch", s.symbol);
         row.innerHTML = `
-          <td>${s.symbol.replace(".NS", "")}</td>
+          <td>${s.shortName || s.symbol.replace(".NS", "")}</td>
           <td>${s.symbol}</td>
           <td class="price">₹ ${s.regularMarketPrice ?? 'N/A'}</td>
         `;
@@ -284,10 +283,10 @@
     });
   }
 
-  function showChart(symbol) {
+  function showChart(name) {
     document.getElementById("chart-block").style.display = "block";
     document.getElementById("tvchart").innerHTML = `
-      <iframe src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=D&theme=light"
+      <iframe src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(name)}&interval=D&theme=light"
               width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no">
       </iframe>
     `;
@@ -296,4 +295,3 @@
 
 </body>
 </html>
-
