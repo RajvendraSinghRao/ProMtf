@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Global & Indian Indices + NSE Stock Search</title>
+  <title>Live Market Viewer + Watchlist</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
     table {
       margin: 20px auto;
       border-collapse: collapse;
-      width: 80%;
+      width: 90%;
       background-color: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
@@ -25,14 +25,8 @@
       background-color: #007bff;
       color: white;
     }
-    .price {
-      font-weight: bold;
-      color: green;
-    }
-    .error {
-      color: red;
-    }
-
+    .price { font-weight: bold; color: green; }
+    .error { color: red; }
     #search-container {
       margin: 30px auto;
       max-width: 600px;
@@ -61,19 +55,23 @@
     .suggestion-item:hover {
       background: #f0f0f0;
     }
+    .chart-container {
+      width: 90%;
+      margin: 20px auto;
+    }
   </style>
 </head>
 <body>
 
 <h1>Live Market Indices (India & Global)</h1>
 
-<!-- Search Bar -->
+<!-- 🔍 Search Bar -->
 <div id="search-container">
   <input type="text" id="search" placeholder="Search NSE stock (A-Z)">
   <div id="suggestions"></div>
 </div>
 
-<!-- Index Table -->
+<!-- 📈 Live Indices -->
 <table>
   <thead>
     <tr>
@@ -85,7 +83,7 @@
   <tbody id="stock-table"></tbody>
 </table>
 
-<!-- Selected Stock Details -->
+<!-- 📋 Selected Stock -->
 <h2>Selected Stock Details</h2>
 <table id="selected-stock-table" style="display:none;">
   <thead>
@@ -96,13 +94,38 @@
       <th>High</th>
       <th>Low</th>
       <th>Prev. Close</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody id="selected-stock-body"></tbody>
 </table>
 
+<!-- 📊 Chart -->
+<div class="chart-container" id="chart-block" style="display:none;">
+  <h2>Stock Chart</h2>
+  <div id="tvchart"></div>
+</div>
+
+<!-- ⭐ Watchlist -->
+<h2>My Watchlist</h2>
+<table id="watchlist-table" style="display:none;">
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Price</th>
+      <th>Open</th>
+      <th>High</th>
+      <th>Low</th>
+      <th>Prev. Close</th>
+      <th>Remove</th>
+    </tr>
+  </thead>
+  <tbody id="watchlist-body"></tbody>
+</table>
+
 <script>
   const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
+  const watchlist = [];
 
   const indices = [
     { name: "NIFTY 50", symbol: "^NSEI" },
@@ -114,8 +137,6 @@
   ];
 
   const table = document.getElementById("stock-table");
-
-  // Create index rows
   indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -129,7 +150,6 @@
   async function fetchPrices() {
     const symbols = indices.map(i => i.symbol).join(",");
     const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbols}`;
-
     try {
       const res = await fetch(url, {
         method: "GET",
@@ -138,10 +158,8 @@
           "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
         }
       });
-
       const data = await res.json();
       const results = data.quoteResponse.result;
-
       results.forEach(index => {
         const cellId = index.symbol.replace(/[\^\.]/g, '');
         const cell = document.getElementById(cellId);
@@ -149,7 +167,6 @@
           const price = index.regularMarketPrice.toFixed(2);
           const currency = index.currency || "₹";
           cell.textContent = `${currency} ${price}`;
-          cell.classList.remove("error");
           cell.classList.add("price");
         } else {
           cell.textContent = "Unavailable";
@@ -157,22 +174,15 @@
         }
       });
     } catch (err) {
-      console.error("API fetch error:", err);
-      indices.forEach(index => {
-        const cellId = index.symbol.replace(/[\^\.]/g, '');
-        const cell = document.getElementById(cellId);
-        cell.textContent = "Error";
-        cell.classList.add("error");
-      });
+      console.error("Index fetch error:", err);
     }
   }
 
   fetchPrices();
   setInterval(fetchPrices, 15000);
 
-  // Search bar logic
+  // 🧠 Search Functionality
   let allStocks = [];
-
   fetch('nse_stocks.json')
     .then(res => res.json())
     .then(data => allStocks = data);
@@ -202,37 +212,7 @@
         searchInput.value = stock.symbol;
         suggestionsBox.innerHTML = '';
         suggestionsBox.style.display = "none";
-
-        fetch(`https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${stock.symbol}.NS`, {
-          method: "GET",
-          headers: {
-            "X-RapidAPI-Key": rapidApiKey,
-            "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
-          }
-        })
-        .then(res => res.json())
-        .then(data => {
-          const s = data.quoteResponse.result[0];
-          if (!s) return alert("No data found for symbol");
-
-          const rowHtml = `
-            <tr>
-              <td>${s.symbol}</td>
-              <td>${s.regularMarketPrice ?? 'N/A'}</td>
-              <td>${s.regularMarketOpen ?? 'N/A'}</td>
-              <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
-              <td>${s.regularMarketDayLow ?? 'N/A'}</td>
-              <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
-            </tr>
-          `;
-
-          document.getElementById("selected-stock-body").innerHTML = rowHtml;
-          document.getElementById("selected-stock-table").style.display = "table";
-        })
-        .catch(err => {
-          console.error("Stock fetch error:", err);
-          alert("Failed to fetch stock data.");
-        });
+        loadStockDetails(stock.symbol);
       };
       suggestionsBox.appendChild(item);
     });
@@ -245,6 +225,91 @@
       suggestionsBox.style.display = "none";
     }
   });
+
+  function loadStockDetails(symbol) {
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${symbol}.NS`;
+    fetch(url, {
+      method: "GET",
+      headers: {
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const s = data.quoteResponse.result[0];
+      if (!s) return alert("No data found.");
+
+      document.getElementById("selected-stock-body").innerHTML = `
+        <tr>
+          <td>${s.symbol}</td>
+          <td>${s.regularMarketPrice ?? 'N/A'}</td>
+          <td>${s.regularMarketOpen ?? 'N/A'}</td>
+          <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
+          <td>${s.regularMarketDayLow ?? 'N/A'}</td>
+          <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
+          <td><button onclick="addToWatchlist('${s.symbol}')">Add to Watchlist</button></td>
+        </tr>
+      `;
+      document.getElementById("selected-stock-table").style.display = "table";
+      loadChart(s.symbol);
+    })
+    .catch(err => console.error("Stock fetch error:", err));
+  }
+
+  function loadChart(symbol) {
+    document.getElementById("chart-block").style.display = "block";
+    document.getElementById("tvchart").innerHTML = `
+      <iframe src="https://s.tradingview.com/widgetembed/?symbol=NSE%3A${symbol}&interval=D&theme=light"
+              width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no">
+      </iframe>
+    `;
+  }
+
+  function addToWatchlist(symbol) {
+    if (watchlist.includes(symbol)) return alert("Already in watchlist.");
+    watchlist.push(symbol);
+    updateWatchlist();
+  }
+
+  function removeFromWatchlist(symbol) {
+    const idx = watchlist.indexOf(symbol);
+    if (idx > -1) watchlist.splice(idx, 1);
+    updateWatchlist();
+  }
+
+  function updateWatchlist() {
+    if (watchlist.length === 0) {
+      document.getElementById("watchlist-table").style.display = "none";
+      return;
+    }
+
+    const url = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${watchlist.map(s => s + ".NS").join(",")}`;
+    fetch(url, {
+      method: "GET",
+      headers: {
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const rows = data.quoteResponse.result.map(s => `
+        <tr>
+          <td>${s.symbol}</td>
+          <td>${s.regularMarketPrice ?? 'N/A'}</td>
+          <td>${s.regularMarketOpen ?? 'N/A'}</td>
+          <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
+          <td>${s.regularMarketDayLow ?? 'N/A'}</td>
+          <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
+          <td><button onclick="removeFromWatchlist('${s.symbol}')">Remove</button></td>
+        </tr>
+      `).join("");
+
+      document.getElementById("watchlist-body").innerHTML = rows;
+      document.getElementById("watchlist-table").style.display = "table";
+    });
+  }
 </script>
 
 </body>
