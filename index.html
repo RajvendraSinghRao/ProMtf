@@ -11,7 +11,7 @@
       text-align: center;
     }
     table {
-      margin: auto;
+      margin: 20px auto;
       border-collapse: collapse;
       width: 80%;
       background-color: white;
@@ -32,7 +32,7 @@
     .error {
       color: red;
     }
-    /* Search styles */
+
     #search-container {
       margin: 30px auto;
       max-width: 600px;
@@ -73,7 +73,7 @@
   <div id="suggestions"></div>
 </div>
 
-<!-- Live Index Table -->
+<!-- Index Table -->
 <table>
   <thead>
     <tr>
@@ -83,6 +83,22 @@
     </tr>
   </thead>
   <tbody id="stock-table"></tbody>
+</table>
+
+<!-- Selected Stock Details -->
+<h2>Selected Stock Details</h2>
+<table id="selected-stock-table" style="display:none;">
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Price</th>
+      <th>Open</th>
+      <th>High</th>
+      <th>Low</th>
+      <th>Prev. Close</th>
+    </tr>
+  </thead>
+  <tbody id="selected-stock-body"></tbody>
 </table>
 
 <script>
@@ -99,7 +115,7 @@
 
   const table = document.getElementById("stock-table");
 
-  // Build table
+  // Create index rows
   indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -154,7 +170,7 @@
   fetchPrices();
   setInterval(fetchPrices, 15000);
 
-  // Search functionality
+  // Search bar logic
   let allStocks = [];
 
   fetch('nse_stocks.json')
@@ -186,7 +202,37 @@
         searchInput.value = stock.symbol;
         suggestionsBox.innerHTML = '';
         suggestionsBox.style.display = "none";
-        alert(`You selected ${stock.symbol} – You can now fetch price or add to watchlist.`);
+
+        fetch(`https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=IN&symbols=${stock.symbol}.NS`, {
+          method: "GET",
+          headers: {
+            "X-RapidAPI-Key": rapidApiKey,
+            "X-RapidAPI-Host": "apidojo-yahoo-finance-v1.p.rapidapi.com"
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          const s = data.quoteResponse.result[0];
+          if (!s) return alert("No data found for symbol");
+
+          const rowHtml = `
+            <tr>
+              <td>${s.symbol}</td>
+              <td>${s.regularMarketPrice ?? 'N/A'}</td>
+              <td>${s.regularMarketOpen ?? 'N/A'}</td>
+              <td>${s.regularMarketDayHigh ?? 'N/A'}</td>
+              <td>${s.regularMarketDayLow ?? 'N/A'}</td>
+              <td>${s.regularMarketPreviousClose ?? 'N/A'}</td>
+            </tr>
+          `;
+
+          document.getElementById("selected-stock-body").innerHTML = rowHtml;
+          document.getElementById("selected-stock-table").style.display = "table";
+        })
+        .catch(err => {
+          console.error("Stock fetch error:", err);
+          alert("Failed to fetch stock data.");
+        });
       };
       suggestionsBox.appendChild(item);
     });
