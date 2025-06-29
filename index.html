@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Global & Indian Indices</title>
+  <title>Live Global & Indian Indices + NSE Stock Search</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -32,12 +32,48 @@
     .error {
       color: red;
     }
+    /* Search styles */
+    #search-container {
+      margin: 30px auto;
+      max-width: 600px;
+      position: relative;
+    }
+    #search {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    #suggestions {
+      position: absolute;
+      width: 100%;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background: white;
+      display: none;
+      z-index: 99;
+    }
+    .suggestion-item {
+      padding: 8px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .suggestion-item:hover {
+      background: #f0f0f0;
+    }
   </style>
 </head>
 <body>
 
 <h1>Live Market Indices (India & Global)</h1>
 
+<!-- Search Bar -->
+<div id="search-container">
+  <input type="text" id="search" placeholder="Search NSE stock (A-Z)">
+  <div id="suggestions"></div>
+</div>
+
+<!-- Live Index Table -->
 <table>
   <thead>
     <tr>
@@ -50,7 +86,7 @@
 </table>
 
 <script>
-  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4"; // ✅ Replace if needed
+  const rapidApiKey = "953fa1c9cdmsh31ab9b1cefad2d9p1648e9jsn88dcc2d931b4";
 
   const indices = [
     { name: "NIFTY 50", symbol: "^NSEI" },
@@ -63,7 +99,7 @@
 
   const table = document.getElementById("stock-table");
 
-  // Create rows
+  // Build table
   indices.forEach(index => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -116,7 +152,53 @@
   }
 
   fetchPrices();
-  setInterval(fetchPrices, 15000); // Refresh every 15 seconds
+  setInterval(fetchPrices, 15000);
+
+  // Search functionality
+  let allStocks = [];
+
+  fetch('nse_stocks.json')
+    .then(res => res.json())
+    .then(data => allStocks = data);
+
+  const searchInput = document.getElementById("search");
+  const suggestionsBox = document.getElementById("suggestions");
+
+  searchInput.addEventListener("input", function () {
+    const query = this.value.toLowerCase().trim();
+    suggestionsBox.innerHTML = "";
+
+    if (!query) {
+      suggestionsBox.style.display = "none";
+      return;
+    }
+
+    const matches = allStocks.filter(s =>
+      s.symbol.toLowerCase().startsWith(query) ||
+      s.name.toLowerCase().includes(query)
+    ).slice(0, 100);
+
+    matches.forEach(stock => {
+      const item = document.createElement("div");
+      item.className = "suggestion-item";
+      item.textContent = `${stock.symbol} – ${stock.name}`;
+      item.onclick = () => {
+        searchInput.value = stock.symbol;
+        suggestionsBox.innerHTML = '';
+        suggestionsBox.style.display = "none";
+        alert(`You selected ${stock.symbol} – You can now fetch price or add to watchlist.`);
+      };
+      suggestionsBox.appendChild(item);
+    });
+
+    suggestionsBox.style.display = "block";
+  });
+
+  document.addEventListener("click", e => {
+    if (!document.getElementById("search-container").contains(e.target)) {
+      suggestionsBox.style.display = "none";
+    }
+  });
 </script>
 
 </body>
